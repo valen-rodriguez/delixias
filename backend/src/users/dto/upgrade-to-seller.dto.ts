@@ -13,7 +13,7 @@ export class UpgradeToSellerDto {
   @IsNotEmpty({ message: 'La dirección real de domicilio es obligatoria.' })
   direccion: string;
 
-  @ValidateIf((o) => o.foto_perfil_url !== undefined)
+  @IsNotEmpty({ message: 'La foto de perfil es obligatoria para operar como vendedor.' })
   @IsString()
   @IsSupabaseStorageUrl({
     allowedBuckets: ['avatares', 'documentos-verificacion'],
