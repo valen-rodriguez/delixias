@@ -60,6 +60,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
   }
 
   private mapStatusToErrorCode(status: number, fallback: string): string {
+    if (!this.isGenericErrorCode(fallback)) {
+      return fallback;
+    }
     switch (status) {
       case 400:
         return 'VALIDATION_ERROR';
@@ -70,9 +73,27 @@ export class HttpExceptionFilter implements ExceptionFilter {
       case 404:
         return 'NOT_FOUND';
       case 409:
-        return fallback === 'FORBIDDEN' ? 'CONFLICT' : fallback;
+        return 'CONFLICT';
       default:
         return fallback;
     }
   }
+
+  private isGenericErrorCode(error: string): boolean {
+    return GENERIC_ERROR_CODES.has(error);
+  }
 }
+
+const GENERIC_ERROR_CODES = new Set([
+  'BAD_REQUEST',
+  'UNAUTHORIZED',
+  'FORBIDDEN',
+  'NOT_FOUND',
+  'CONFLICT',
+  'METHOD_NOT_ALLOWED',
+  'BAD_GATEWAY',
+  'SERVICE_UNAVAILABLE',
+  'GATEWAY_TIMEOUT',
+  'PAYLOAD_TOO_LARGE',
+  'INTERNAL_ERROR',
+]);

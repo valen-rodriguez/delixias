@@ -29,7 +29,12 @@ export function IsSupabaseStorageUrl(
           return (opts.allowedBuckets ?? []).includes(bucket);
         },
         defaultMessage({ property }: ValidationArguments): string {
-          return `${property} debe ser una URL válida del bucket de Supabase Storage (avatares o documentos-verificacion).`;
+          const buckets = opts.allowedBuckets ?? [];
+          return buckets.length > 0
+            ? `${property} debe ser una URL válida del bucket de Supabase Storage (${buckets.join(
+                ' o ',
+              )}).`
+            : `${property} debe ser una URL válida del bucket de Supabase Storage.`;
         },
       },
     });

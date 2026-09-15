@@ -8,6 +8,13 @@ class TestDto {
   foto_perfil_url: string;
 }
 
+class ProductDto {
+  @IsSupabaseStorageUrl({
+    allowedBuckets: ['productos'],
+  })
+  foto_url: string;
+}
+
 describe('IsSupabaseStorageUrl', () => {
   const base = 'https://wyrjgmzsnixpqydvrmrw.supabase.co';
 
@@ -32,5 +39,22 @@ describe('IsSupabaseStorageUrl', () => {
     dto.foto_perfil_url = url as never;
     const errors = await validate(dto);
     expect(errors.length).toBeGreaterThan(0);
+  });
+
+  it('acepta URL del bucket productos (catálogo)', async () => {
+    const dto = new ProductDto();
+    dto.foto_url = `${base}/storage/v1/object/public/productos/empanada.jpg`;
+    const errors = await validate(dto);
+    expect(errors).toHaveLength(0);
+  });
+
+  it('rechaza URL de otro bucket en catálogo y el mensaje lista productos', async () => {
+    const dto = new ProductDto();
+    dto.foto_url = `${base}/storage/v1/object/public/avatares/30123456.jpg`;
+    const errors = await validate(dto);
+    expect(errors).toHaveLength(1);
+    expect(errors[0].constraints).toMatchObject({
+      IsSupabaseStorageUrl: expect.stringContaining('productos'),
+    });
   });
 });

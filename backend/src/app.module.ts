@@ -5,6 +5,8 @@ import configuration from './config/configuration.js';
 import { DatabaseModule } from './infra/database.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { UsersModule } from './users/users.module.js';
+import { CatalogModule } from './catalog/catalog.module.js';
+import { ShiftsModule } from './shifts/shifts.module.js';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor.js';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter.js';
 import { AppController } from './app.controller.js';
@@ -19,6 +21,8 @@ import { AppService } from './app.service.js';
     DatabaseModule,
     AuthModule,
     UsersModule,
+    CatalogModule,
+    ShiftsModule,
   ],
   controllers: [AppController],
   providers: [
