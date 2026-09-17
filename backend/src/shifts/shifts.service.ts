@@ -3,12 +3,16 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import type { StartShiftDto } from './dto/start-shift.dto.js';
-import type { CurrentShiftResponse } from './entities/jornada.entity.js';
+import type { CurrentShiftResponse, MermaResponse } from './entities/jornada.entity.js';
 import {
+  MermaExceedsStockError,
   NoActiveShiftError,
   NoStockAvailableError,
+  ProductNotInJornadaError,
   ShiftAlreadyActiveError,
   ShiftHasPendingOrdersError,
   ShiftsRepository,
@@ -17,7 +21,10 @@ import {
 
 @Injectable()
 export class ShiftsService {
-  constructor(private readonly shiftsRepository: ShiftsRepository) {}
+  constructor(
+    private readonly shiftsRepository: ShiftsRepository,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   async getCurrentShift(
     idVendedor: string,
@@ -56,7 +63,12 @@ export class ShiftsService {
 
   async endShift(idVendedor: string): Promise<CurrentShiftResponse> {
     try {
-      return await this.shiftsRepository.endShift(idVendedor);
+      const result = await this.shiftsRepository.endShift(idVendedor);
+      this.eventEmitter.emit('shift.ended', {
+        id_jornada: result.id_jornada,
+        id_vendedor: idVendedor,
+      });
+      return result;
     } catch (error) {
       if (error instanceof ShiftHasPendingOrdersError) {
         throw new ConflictException({
@@ -67,6 +79,42 @@ export class ShiftsService {
       if (error instanceof NoActiveShiftError) {
         throw new ConflictException({
           error: 'NO_ACTIVE_SHIFT',
+          message: error.message,
+        });
+      }
+      throw error;
+    }
+  }
+
+  async registerMerma(
+    idVendedor: string,
+    idProducto: string,
+    cantidad: number,
+    motivo: string,
+  ): Promise<MermaResponse> {
+    try {
+      return await this.shiftsRepository.registerMerma(
+        idVendedor,
+        idProducto,
+        cantidad,
+        motivo,
+      );
+    } catch (error) {
+      if (error instanceof NoActiveShiftError) {
+        throw new ConflictException({
+          error: 'NO_ACTIVE_SHIFT',
+          message: error.message,
+        });
+      }
+      if (error instanceof ProductNotInJornadaError) {
+        throw new NotFoundException({
+          error: 'PRODUCT_NOT_FOUND_EN_JORNADA',
+          message: error.message,
+        });
+      }
+      if (error instanceof MermaExceedsStockError) {
+        throw new BadRequestException({
+          error: 'MERMA_EXCEEDS_STOCK',
           message: error.message,
         });
       }

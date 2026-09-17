@@ -2,13 +2,15 @@ import { vi } from 'vitest';
 import { ShiftsService } from './shifts.service.js';
 import type { ShiftsRepository } from './shifts.repository.js';
 import {
+  MermaExceedsStockError,
   NoActiveShiftError,
   NoStockAvailableError,
+  ProductNotInJornadaError,
   ShiftAlreadyActiveError,
   ShiftHasPendingOrdersError,
   VendedorNotActiveError,
 } from './shifts.repository.js';
-import type { CurrentShiftResponse } from './entities/jornada.entity.js';
+import type { CurrentShiftResponse, MermaResponse } from './entities/jornada.entity.js';
 
 const currentShift: CurrentShiftResponse = {
   id_jornada: '521d1c58-9c4e-4af7-9f95-1e6f1c0e9a4a',
@@ -46,23 +48,37 @@ const closedShift: CurrentShiftResponse = {
   fecha_hora_fin: '2026-03-15T20:30:00.000Z',
 };
 
+const mermaResponse: MermaResponse = {
+  id_producto: 'c6b1d8f4-1e2b-4c4a-8b5a-2f3a4b5c6d7e',
+  stock_actual_anterior: 10,
+  stock_actual_nuevo: 7,
+  cantidad_mermada: 3,
+  motivo: 'Producto caído',
+};
+
 type MockedRepo = {
   [K in keyof ShiftsRepository]: ReturnType<typeof vi.fn>;
 };
 
 describe('ShiftsService', () => {
   let repo: MockedRepo;
+  let eventEmitter: { emit: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     repo = {
       findCurrentShift: vi.fn(),
       startShift: vi.fn(),
       endShift: vi.fn(),
+      registerMerma: vi.fn(),
     };
+    eventEmitter = { emit: vi.fn() };
   });
 
   function makeService(): ShiftsService {
-    return new ShiftsService(repo as unknown as ShiftsRepository);
+    return new ShiftsService(
+      repo as unknown as ShiftsRepository,
+      eventEmitter as never,
+    );
   }
 
   const startPayload = {
@@ -151,13 +167,17 @@ describe('ShiftsService', () => {
     });
   });
 
-  it('endShift finaliza la jornada con fecha_hora_fin', async () => {
+  it('endShift finaliza la jornada con fecha_hora_fin y emite shift.ended', async () => {
     repo.endShift.mockResolvedValue(closedShift);
     const result = await makeService().endShift('vendedor-uuid');
     expect(repo.endShift).toHaveBeenCalledWith('vendedor-uuid');
     expect(result).toMatchObject({
       estado: 'FINALIZADA',
       fecha_hora_fin: '2026-03-15T20:30:00.000Z',
+    });
+    expect(eventEmitter.emit).toHaveBeenCalledWith('shift.ended', {
+      id_jornada: closedShift.id_jornada,
+      id_vendedor: 'vendedor-uuid',
     });
   });
 
@@ -171,6 +191,7 @@ describe('ShiftsService', () => {
       status: 409,
       response: { error: 'SHIFT_HAS_PENDING_ORDERS' },
     });
+    expect(eventEmitter.emit).not.toHaveBeenCalled();
   });
 
   it('endShift sin jornada activa responde 409 NO_ACTIVE_SHIFT', async () => {
@@ -180,6 +201,59 @@ describe('ShiftsService', () => {
     ).rejects.toMatchObject({
       status: 409,
       response: { error: 'NO_ACTIVE_SHIFT' },
+    });
+  });
+
+  it('registerMerma devuelve la respuesta de merma exitosa', async () => {
+    repo.registerMerma.mockResolvedValue(mermaResponse);
+    const result = await makeService().registerMerma(
+      'vendedor-uuid',
+      'c6b1d8f4-1e2b-4c4a-8b5a-2f3a4b5c6d7e',
+      3,
+      'Producto caído',
+    );
+    expect(result).toMatchObject({
+      id_producto: 'c6b1d8f4-1e2b-4c4a-8b5a-2f3a4b5c6d7e',
+      stock_actual_anterior: 10,
+      stock_actual_nuevo: 7,
+      cantidad_mermada: 3,
+      motivo: 'Producto caído',
+    });
+  });
+
+  it('registerMerma sin jornada activa responde 409 NO_ACTIVE_SHIFT', async () => {
+    repo.registerMerma.mockRejectedValue(
+      new NoActiveShiftError('no hay jornada'),
+    );
+    await expect(
+      makeService().registerMerma('vendedor-uuid', 'p1', 1, 'motivo'),
+    ).rejects.toMatchObject({
+      status: 409,
+      response: { error: 'NO_ACTIVE_SHIFT' },
+    });
+  });
+
+  it('registerMerma con producto no en jornada responde 404 PRODUCT_NOT_FOUND_EN_JORNADA', async () => {
+    repo.registerMerma.mockRejectedValue(
+      new ProductNotInJornadaError('no existe'),
+    );
+    await expect(
+      makeService().registerMerma('vendedor-uuid', 'p1', 1, 'motivo'),
+    ).rejects.toMatchObject({
+      status: 404,
+      response: { error: 'PRODUCT_NOT_FOUND_EN_JORNADA' },
+    });
+  });
+
+  it('registerMerma con cantidad excesiva responde 400 MERMA_EXCEEDS_STOCK', async () => {
+    repo.registerMerma.mockRejectedValue(
+      new MermaExceedsStockError('excede'),
+    );
+    await expect(
+      makeService().registerMerma('vendedor-uuid', 'p1', 999, 'motivo'),
+    ).rejects.toMatchObject({
+      status: 400,
+      response: { error: 'MERMA_EXCEEDS_STOCK' },
     });
   });
 

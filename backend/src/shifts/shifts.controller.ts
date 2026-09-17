@@ -11,6 +11,7 @@ import {
 import type { Request } from 'express';
 import { SupabaseJwtAuthGuard } from '../auth/guards/supabase-jwt-auth.guard.js';
 import type { AuthUser } from '../auth/strategies/supabase-jwt.strategy.js';
+import { MermaDto } from './dto/merma.dto.js';
 import { StartShiftDto } from './dto/start-shift.dto.js';
 import { ShiftsService } from './shifts.service.js';
 
@@ -41,5 +42,19 @@ export class ShiftsController {
   @HttpCode(HttpStatus.OK)
   endShift(@Req() req: RequestWithUser) {
     return this.shiftsService.endShift(req.user.id_usuario);
+  }
+
+  @Post('merma')
+  @HttpCode(HttpStatus.OK)
+  registerMerma(
+    @Req() req: RequestWithUser,
+    @Body() dto: MermaDto,
+  ) {
+    return this.shiftsService.registerMerma(
+      req.user.id_usuario,
+      dto.id_producto,
+      dto.cantidad,
+      dto.motivo,
+    );
   }
 }

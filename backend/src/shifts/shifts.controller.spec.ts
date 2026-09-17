@@ -4,12 +4,19 @@ import { ShiftsModule } from './shifts.module.js';
 import type { ShiftsService } from './shifts.service.js';
 import type { AuthUser } from '../auth/strategies/supabase-jwt.strategy.js';
 import type { StartShiftDto } from './dto/start-shift.dto.js';
+import type { MermaDto } from './dto/merma.dto.js';
 
 const USER: AuthUser = { id_usuario: 'u1', email: 'vendedor@delixias.com' };
 
 const START_DTO: StartShiftDto = {
   lat: -38.0054771,
   lng: -57.5426106,
+};
+
+const MERMA_DTO: MermaDto = {
+  id_producto: 'p1',
+  cantidad: 3,
+  motivo: 'Producto caído',
 };
 
 function makeRequest(): { user: AuthUser } {
@@ -21,6 +28,7 @@ describe('ShiftsController', () => {
     getCurrentShift: ReturnType<typeof vi.fn>;
     startShift: ReturnType<typeof vi.fn>;
     endShift: ReturnType<typeof vi.fn>;
+    registerMerma: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
@@ -28,6 +36,7 @@ describe('ShiftsController', () => {
       getCurrentShift: vi.fn(),
       startShift: vi.fn(),
       endShift: vi.fn(),
+      registerMerma: vi.fn(),
     };
   });
 
@@ -52,5 +61,15 @@ describe('ShiftsController', () => {
   it('GET /shifts/current usa el id del usuario', async () => {
     await makeController().getCurrentShift(makeRequest() as never);
     expect(service.getCurrentShift).toHaveBeenCalledWith('u1');
+  });
+
+  it('POST /shifts/merma pasa vendedor, id_producto, cantidad y motivo', async () => {
+    await makeController().registerMerma(makeRequest() as never, MERMA_DTO);
+    expect(service.registerMerma).toHaveBeenCalledWith(
+      'u1',
+      'p1',
+      3,
+      'Producto caído',
+    );
   });
 });

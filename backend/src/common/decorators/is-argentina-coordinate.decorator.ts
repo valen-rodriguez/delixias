@@ -10,7 +10,7 @@ export interface ArgentinaBounds {
 }
 
 const ARGENTINA_LAT: ArgentinaBounds = { min: -55, max: -21 };
-const ARGENTINA_LNG: ArgentinaBounds = { min: -70, max: -53 };
+const ARGENTINA_LNG: ArgentinaBounds = { min: -74, max: -53 };
 
 function makeRangeValidator(
   name: string,

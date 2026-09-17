@@ -6,6 +6,7 @@ import type {
   InventarioItem,
   JornadaEstado,
   JornadaRow,
+  MermaResponse,
   SnapshotItem,
 } from './entities/jornada.entity.js';
 
@@ -14,6 +15,8 @@ export class NoStockAvailableError extends Error {}
 export class ShiftAlreadyActiveError extends Error {}
 export class NoActiveShiftError extends Error {}
 export class ShiftHasPendingOrdersError extends Error {}
+export class MermaExceedsStockError extends Error {}
+export class ProductNotInJornadaError extends Error {}
 
 interface QueryRunner {
   query: (text: string, values?: unknown[]) => Promise<QueryResult>;
@@ -285,7 +288,8 @@ export class ShiftsRepository {
       const active = await client.query(
         `SELECT id_jornada
            FROM public.jornadas
-          WHERE id_vendedor = $1 AND estado = 'ACTIVA'`,
+          WHERE id_vendedor = $1 AND estado = 'ACTIVA'
+            FOR UPDATE`,
         [idVendedor],
       );
       if ((active.rowCount ?? 0) === 0) {
@@ -329,6 +333,77 @@ export class ShiftsRepository {
       const jornada = mapJornadaRow(result.rows[0]);
       const inventario = await this.selectInventario(client, idJornada);
       return buildCurrentShiftResponse(jornada, inventario);
+    });
+  }
+
+  async registerMerma(
+    idVendedor: string,
+    idProducto: string,
+    cantidad: number,
+    motivo: string,
+  ): Promise<MermaResponse> {
+    return this.withTransaction(async (client) => {
+      const active = await client.query(
+        `SELECT id_jornada
+           FROM public.jornadas
+          WHERE id_vendedor = $1 AND estado = 'ACTIVA'`,
+        [idVendedor],
+      );
+      if ((active.rowCount ?? 0) === 0) {
+        throw new NoActiveShiftError(
+          'No se encontró una jornada activa para el vendedor.',
+        );
+      }
+      const idJornada = active.rows[0].id_jornada as string;
+
+      const invRow = await client.query(
+        `SELECT stock_actual
+           FROM public.inventario_jornada
+          WHERE id_jornada = $1 AND id_producto = $2`,
+        [idJornada, idProducto],
+      );
+      if ((invRow.rowCount ?? 0) === 0) {
+        throw new ProductNotInJornadaError(
+          'El producto no existe en el inventario de esta jornada.',
+        );
+      }
+
+      const stockActual = invRow.rows[0].stock_actual as number;
+      if (cantidad > stockActual) {
+        throw new MermaExceedsStockError(
+          `La cantidad de merma (${cantidad}) excede el stock actual disponible (${stockActual}).`,
+        );
+      }
+
+      const nuevoStock = stockActual - cantidad;
+      await client.query(
+        `UPDATE public.inventario_jornada
+            SET stock_actual = $3
+          WHERE id_jornada = $1 AND id_producto = $2`,
+        [idJornada, idProducto, nuevoStock],
+      );
+
+      await client.query(
+        `INSERT INTO public.movimientos_stock
+           (id_producto, id_jornada, tipo, cantidad, motivo, saldo_resultante, origen_tipo, id_origen, id_usuario)
+         VALUES ($1, $2, 'MERMA', $3, $4, $5, 'autonomo', $6, $6)`,
+        [idProducto, idJornada, cantidad, motivo, nuevoStock, idVendedor],
+      );
+
+      await client.query(
+        `UPDATE public.productos
+            SET stock_base = stock_base - $3
+          WHERE id_producto = $1 AND id_vendedor_autonomo = $2`,
+        [idProducto, idVendedor, cantidad],
+      );
+
+      return {
+        id_producto: idProducto,
+        stock_actual_anterior: stockActual,
+        stock_actual_nuevo: nuevoStock,
+        cantidad_mermada: cantidad,
+        motivo,
+      };
     });
   }
 

@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Pool } from 'pg';
 import {
+  MermaExceedsStockError,
   NoActiveShiftError,
   NoStockAvailableError,
+  ProductNotInJornadaError,
   ShiftAlreadyActiveError,
   ShiftHasPendingOrdersError,
   ShiftsRepository,
@@ -175,7 +177,7 @@ describe('ShiftsRepository', () => {
       expect(client.query).toHaveBeenCalledWith('ROLLBACK');
     });
 
-    it('rechaza con jornada ya activa (pre-checko) con ShiftAlreadyActiveError', async () => {
+    it('rechaza con jornada ya activa (pre-check) con ShiftAlreadyActiveError', async () => {
       const { pool, client } = makeMocks();
       client.query.mockImplementation(sequence([
         qr([]),
@@ -190,7 +192,7 @@ describe('ShiftsRepository', () => {
       expect(client.query).toHaveBeenCalledWith('ROLLBACK');
     });
 
-    it('mapa 23505 a ShiftAlreadyActiveError (guerra contra la race condition)', async () => {
+    it('mapea 23505 a ShiftAlreadyActiveError (guerra contra la race condition)', async () => {
       const { pool, client } = makeMocks();
       const uniqueViolation = Object.assign(new Error('duplicate key'), {
         code: '23505',
@@ -337,6 +339,23 @@ describe('ShiftsRepository', () => {
       expect(client.query).toHaveBeenCalledWith('ROLLBACK');
     });
 
+    it('usa FOR UPDATE para serializar operaciones concurrentes', async () => {
+      const { pool, client } = makeMocks();
+      client.query.mockImplementation(sequence([
+        qr([]),
+        qr([{ id_jornada: 'j1' }], 1),
+        qr([], 0),
+        qr([FINALIZED_JORNADA], 1),
+        qr([INVENTARIO_1], 1),
+        qr([]),
+      ]));
+      await makeRepo(pool).endShift('v1');
+      const forUpdateCall = client.query.mock.calls.find(([sql]) =>
+        String(sql).includes('FOR UPDATE'),
+      );
+      expect(forUpdateCall).toBeDefined();
+    });
+
     it('rechaza con pedidos pendientes en solicitado/en_curso', async () => {
       const { pool, client } = makeMocks();
       client.query.mockImplementation(sequence([
@@ -398,6 +417,93 @@ describe('ShiftsRepository', () => {
         makeRepo(pool).endShift('v1'),
       ).rejects.toBeInstanceOf(NoActiveShiftError);
       expect(client.query).toHaveBeenCalledWith('ROLLBACK');
+    });
+  });
+
+  describe('registerMerma', () => {
+    it('lanza NoActiveShiftError si no hay jornada activa', async () => {
+      const { pool, client } = makeMocks();
+      client.query.mockImplementation(sequence([
+        qr([]),
+        qr([], 0),
+        qr([]),
+      ]));
+      await expect(
+        makeRepo(pool).registerMerma('v1', 'p1', 5, 'motivo'),
+      ).rejects.toBeInstanceOf(NoActiveShiftError);
+      expect(client.query).toHaveBeenCalledWith('ROLLBACK');
+    });
+
+    it('lanza ProductNotInJornadaError si el producto no está en inventario', async () => {
+      const { pool, client } = makeMocks();
+      client.query.mockImplementation(sequence([
+        qr([]),
+        qr([{ id_jornada: 'j1' }], 1),
+        qr([], 0),
+        qr([]),
+      ]));
+      await expect(
+        makeRepo(pool).registerMerma('v1', 'p_no_existente', 5, 'motivo'),
+      ).rejects.toBeInstanceOf(ProductNotInJornadaError);
+      expect(client.query).toHaveBeenCalledWith('ROLLBACK');
+    });
+
+    it('lanza MermaExceedsStockError si cantidad > stock_actual', async () => {
+      const { pool, client } = makeMocks();
+      client.query.mockImplementation(sequence([
+        qr([]),
+        qr([{ id_jornada: 'j1' }], 1),
+        qr([{ stock_actual: 3 }], 1),
+        qr([]),
+      ]));
+      await expect(
+        makeRepo(pool).registerMerma('v1', 'p1', 5, 'motivo'),
+      ).rejects.toBeInstanceOf(MermaExceedsStockError);
+      expect(client.query).toHaveBeenCalledWith('ROLLBACK');
+    });
+
+    it('ejecuta merma: descuenta inventario, escribe kárdex MERMA y descuenta stock_base', async () => {
+      const { pool, client } = makeMocks();
+      client.query.mockImplementation(sequence([
+        qr([]),
+        qr([{ id_jornada: 'j1' }], 1),
+        qr([{ stock_actual: 10 }], 1),
+        qr([], 1),
+        qr([], 1),
+        qr([], 1),
+        qr([]),
+      ]));
+
+      const result = await makeRepo(pool).registerMerma('v1', 'p1', 3, 'Producto caído');
+
+      expect(client.query).toHaveBeenCalledWith('BEGIN');
+      expect(client.query).toHaveBeenCalledWith('COMMIT');
+
+      const updateInventario = client.query.mock.calls.find(([sql]) =>
+        String(sql).includes('UPDATE public.inventario_jornada'),
+      );
+      expect(updateInventario).toBeDefined();
+      expect(updateInventario[1]).toEqual(['j1', 'p1', 7]);
+
+      const insertKardex = client.query.mock.calls.find(([sql]) =>
+        String(sql).includes('INSERT INTO public.movimientos_stock'),
+      );
+      expect(insertKardex).toBeDefined();
+      expect(insertKardex[1]).toEqual(['p1', 'j1', 3, 'Producto caído', 7, 'v1']);
+
+      const updateStockBase = client.query.mock.calls.find(([sql]) =>
+        String(sql).includes('UPDATE public.productos') && String(sql).includes('stock_base'),
+      );
+      expect(updateStockBase).toBeDefined();
+      expect(updateStockBase[1]).toEqual(['p1', 'v1', 3]);
+
+      expect(result).toMatchObject({
+        id_producto: 'p1',
+        stock_actual_anterior: 10,
+        stock_actual_nuevo: 7,
+        cantidad_mermada: 3,
+        motivo: 'Producto caído',
+      });
     });
   });
 });

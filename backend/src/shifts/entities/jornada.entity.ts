@@ -40,3 +40,11 @@ export interface CurrentShiftResponse {
   };
   inventario: InventarioItem[];
 }
+
+export interface MermaResponse {
+  id_producto: string;
+  stock_actual_anterior: number;
+  stock_actual_nuevo: number;
+  cantidad_mermada: number;
+  motivo: string;
+}
