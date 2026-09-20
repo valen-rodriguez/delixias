@@ -462,13 +462,12 @@ describe('ShiftsRepository', () => {
       expect(client.query).toHaveBeenCalledWith('ROLLBACK');
     });
 
-    it('ejecuta merma: descuenta inventario, escribe kárdex MERMA y descuenta stock_base', async () => {
+    it('ejecuta merma: descuenta inventario y escribe kárdex MERMA (stock_base no se modifica)', async () => {
       const { pool, client } = makeMocks();
       client.query.mockImplementation(sequence([
         qr([]),
         qr([{ id_jornada: 'j1' }], 1),
         qr([{ stock_actual: 10 }], 1),
-        qr([], 1),
         qr([], 1),
         qr([], 1),
         qr([]),
@@ -494,8 +493,7 @@ describe('ShiftsRepository', () => {
       const updateStockBase = client.query.mock.calls.find(([sql]) =>
         String(sql).includes('UPDATE public.productos') && String(sql).includes('stock_base'),
       );
-      expect(updateStockBase).toBeDefined();
-      expect(updateStockBase[1]).toEqual(['p1', 'v1', 3]);
+      expect(updateStockBase).toBeUndefined();
 
       expect(result).toMatchObject({
         id_producto: 'p1',
