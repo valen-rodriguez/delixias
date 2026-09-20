@@ -1,10 +1,12 @@
 import { Module, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { RedisModule } from '../infra/redis.module.js';
 import type { AppConfiguration } from '../config/configuration.js';
 import { InactivityJob } from './inactivity.job.js';
 import { AnonymizationJob } from './anonymization.job.js';
 
 @Module({
+  imports: [RedisModule],
   providers: [InactivityJob, AnonymizationJob],
 })
 export class JobsModule implements OnModuleInit, OnModuleDestroy {

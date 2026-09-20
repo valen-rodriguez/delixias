@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Pool } from 'pg';
 import type { AppConfiguration } from '../config/configuration.js';
-import type { RedisGeoService } from '../infra/redis-geo.service.js';
+import { RedisGeoService } from '../infra/redis-geo.service.js';
 
 @Injectable()
 export class InactivityJob {

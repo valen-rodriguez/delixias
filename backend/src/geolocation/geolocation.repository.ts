@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { Pool } from 'pg';
-import type { RedisGeoService } from '../infra/redis-geo.service.js';
+import { RedisGeoService } from '../infra/redis-geo.service.js';
 
 @Injectable()
 export class GeolocationRepository {

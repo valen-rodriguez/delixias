@@ -12,8 +12,6 @@ import { ShiftsModule } from './shifts/shifts.module.js';
 import { GeolocationModule } from './geolocation/geolocation.module.js';
 import { MapModule } from './map/map.module.js';
 import { JobsModule } from './jobs/jobs.module.js';
-import { OrdersModule } from './orders/orders.module.js';
-import { NotificationsModule } from './notifications/notifications.module.js';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor.js';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter.js';
 import { AppController } from './app.controller.js';
@@ -35,8 +33,6 @@ import { AppService } from './app.service.js';
     GeolocationModule,
     MapModule,
     JobsModule,
-    OrdersModule,
-    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [

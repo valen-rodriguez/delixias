@@ -31,13 +31,13 @@ function sequence(values: Array<unknown | Error>): ReturnType<typeof vi.fn> {
   });
 }
 
-function makeMocks(): { pool: Pool; client: { query: ReturnType<typeof vi.fn>; release: ReturnType<typeof vi.fn> } } {
+function makeMocks(): { pool: Pool & { query: ReturnType<typeof vi.fn> }; client: { query: ReturnType<typeof vi.fn>; release: ReturnType<typeof vi.fn> } } {
   const client = { query: vi.fn(), release: vi.fn() };
   const pool = {
     query: vi.fn(),
     connect: vi.fn(async () => client),
   };
-  return { pool: pool as unknown as Pool, client };
+  return { pool: pool as unknown as Pool & { query: ReturnType<typeof vi.fn> }, client };
 }
 
 function makeRepo(pool: Pool): ShiftsRepository {
@@ -391,8 +391,8 @@ describe('ShiftsRepository', () => {
         String(sql).includes('UPDATE public.jornadas'),
       );
       expect(updateCall).toBeDefined();
-      expect(String(updateCall[0])).toContain('cierre_automatico = false');
-      expect(updateCall[1]).toEqual(['j1', 'v1']);
+      expect(String(updateCall![0])).toContain('cierre_automatico = false');
+      expect(updateCall![1]).toEqual(['j1', 'v1']);
 
       expect(shift).toMatchObject({
         id_jornada: 'j1',
@@ -482,13 +482,13 @@ describe('ShiftsRepository', () => {
         String(sql).includes('UPDATE public.inventario_jornada'),
       );
       expect(updateInventario).toBeDefined();
-      expect(updateInventario[1]).toEqual(['j1', 'p1', 7]);
+      expect(updateInventario![1]).toEqual(['j1', 'p1', 7]);
 
       const insertKardex = client.query.mock.calls.find(([sql]) =>
         String(sql).includes('INSERT INTO public.movimientos_stock'),
       );
       expect(insertKardex).toBeDefined();
-      expect(insertKardex[1]).toEqual(['p1', 'j1', 3, 'Producto caído', 7, 'v1']);
+      expect(insertKardex![1]).toEqual(['p1', 'j1', 3, 'Producto caído', 7, 'v1']);
 
       const updateStockBase = client.query.mock.calls.find(([sql]) =>
         String(sql).includes('UPDATE public.productos') && String(sql).includes('stock_base'),

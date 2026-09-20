@@ -8,7 +8,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { OnEvent } from '@nestjs/event-emitter';
 import type { AppConfiguration } from '../config/configuration.js';
-import type { RedisGeoService } from '../infra/redis-geo.service.js';
+import { RedisGeoService } from '../infra/redis-geo.service.js';
 import type { TrackingPingDto } from './dto/tracking-ping.dto.js';
 import type { TrackingPingResponse, TrackingStatusResponse } from './entities/tracking.entity.js';
 import { GeolocationGateway } from './geolocation.gateway.js';
