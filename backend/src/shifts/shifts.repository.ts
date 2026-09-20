@@ -390,13 +390,6 @@ export class ShiftsRepository {
         [idProducto, idJornada, cantidad, motivo, nuevoStock, idVendedor],
       );
 
-      await client.query(
-        `UPDATE public.productos
-            SET stock_base = stock_base - $3
-          WHERE id_producto = $1 AND id_vendedor_autonomo = $2`,
-        [idProducto, idVendedor, cantidad],
-      );
-
       return {
         id_producto: idProducto,
         stock_actual_anterior: stockActual,

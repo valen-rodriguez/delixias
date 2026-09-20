@@ -47,12 +47,12 @@ describe('UsersService', () => {
   it('getProfile devuelve el perfil sanitizado', async () => {
     repo.findById.mockResolvedValue(baseRow);
     const profile = await makeService().getProfile(baseRow.id_usuario);
-    expect(profile).toMatchObject<SanitizedProfile>({
+    expect(profile).toMatchObject({
       id_usuario: baseRow.id_usuario,
       email: baseRow.email,
       estado_vendedor: 'no_solicitado',
       ultimo_rol_activo: 'cliente',
-    });
+    } satisfies Partial<SanitizedProfile>);
   });
 
   it('upgradeToSeller con DNI duplicado responde 409 DNI_ALREADY_IN_USE', async () => {

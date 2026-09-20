@@ -28,13 +28,13 @@ function sequence(values: Array<unknown | Error>): ReturnType<typeof vi.fn> {
   });
 }
 
-function makeMocks(): { pool: Pool; client: { query: ReturnType<typeof vi.fn>; release: ReturnType<typeof vi.fn> } } {
+function makeMocks(): { pool: Pool & { query: ReturnType<typeof vi.fn> }; client: { query: ReturnType<typeof vi.fn>; release: ReturnType<typeof vi.fn> } } {
   const client = { query: vi.fn(), release: vi.fn() };
   const pool = {
     query: vi.fn(),
     connect: vi.fn(async () => client),
   };
-  return { pool: pool as unknown as Pool, client };
+  return { pool: pool as unknown as Pool & { query: ReturnType<typeof vi.fn> }, client };
 }
 
 function makeRepo(pool: Pool): CatalogRepository {
@@ -368,8 +368,9 @@ describe('CatalogRepository', () => {
       const updateCall = client.query.mock.calls.find(([sql]) =>
         String(sql).includes('UPDATE public.productos'),
       );
-      expect(String(updateCall[0])).toContain('SET foto_url = $2');
-      expect(updateCall[1]).toEqual(['p1', null]);
+      expect(updateCall).toBeDefined();
+      expect(String(updateCall![0])).toContain('SET foto_url = $2');
+      expect(updateCall![1]).toEqual(['p1', null]);
     });
   });
 

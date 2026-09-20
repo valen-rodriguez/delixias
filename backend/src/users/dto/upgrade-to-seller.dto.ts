@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, Matches, ValidateIf } from 'class-validator';
+import { IsString, IsNotEmpty, Matches } from 'class-validator';
 import { IsSupabaseStorageUrl } from '../../common/decorators/is-supabase-storage-url.decorator.js';
 
 export class UpgradeToSellerDto {

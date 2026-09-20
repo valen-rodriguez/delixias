@@ -31,13 +31,13 @@ function sequence(values: Array<unknown | Error>): ReturnType<typeof vi.fn> {
   });
 }
 
-function makeMocks(): { pool: Pool; client: { query: ReturnType<typeof vi.fn>; release: ReturnType<typeof vi.fn> } } {
+function makeMocks(): { pool: Pool & { query: ReturnType<typeof vi.fn> }; client: { query: ReturnType<typeof vi.fn>; release: ReturnType<typeof vi.fn> } } {
   const client = { query: vi.fn(), release: vi.fn() };
   const pool = {
     query: vi.fn(),
     connect: vi.fn(async () => client),
   };
-  return { pool: pool as unknown as Pool, client };
+  return { pool: pool as unknown as Pool & { query: ReturnType<typeof vi.fn> }, client };
 }
 
 function makeRepo(pool: Pool): ShiftsRepository {
@@ -391,8 +391,8 @@ describe('ShiftsRepository', () => {
         String(sql).includes('UPDATE public.jornadas'),
       );
       expect(updateCall).toBeDefined();
-      expect(String(updateCall[0])).toContain('cierre_automatico = false');
-      expect(updateCall[1]).toEqual(['j1', 'v1']);
+      expect(String(updateCall![0])).toContain('cierre_automatico = false');
+      expect(updateCall![1]).toEqual(['j1', 'v1']);
 
       expect(shift).toMatchObject({
         id_jornada: 'j1',
@@ -462,13 +462,12 @@ describe('ShiftsRepository', () => {
       expect(client.query).toHaveBeenCalledWith('ROLLBACK');
     });
 
-    it('ejecuta merma: descuenta inventario, escribe kárdex MERMA y descuenta stock_base', async () => {
+    it('ejecuta merma: descuenta inventario y escribe kárdex MERMA (stock_base no se modifica)', async () => {
       const { pool, client } = makeMocks();
       client.query.mockImplementation(sequence([
         qr([]),
         qr([{ id_jornada: 'j1' }], 1),
         qr([{ stock_actual: 10 }], 1),
-        qr([], 1),
         qr([], 1),
         qr([], 1),
         qr([]),
@@ -483,19 +482,18 @@ describe('ShiftsRepository', () => {
         String(sql).includes('UPDATE public.inventario_jornada'),
       );
       expect(updateInventario).toBeDefined();
-      expect(updateInventario[1]).toEqual(['j1', 'p1', 7]);
+      expect(updateInventario![1]).toEqual(['j1', 'p1', 7]);
 
       const insertKardex = client.query.mock.calls.find(([sql]) =>
         String(sql).includes('INSERT INTO public.movimientos_stock'),
       );
       expect(insertKardex).toBeDefined();
-      expect(insertKardex[1]).toEqual(['p1', 'j1', 3, 'Producto caído', 7, 'v1']);
+      expect(insertKardex![1]).toEqual(['p1', 'j1', 3, 'Producto caído', 7, 'v1']);
 
       const updateStockBase = client.query.mock.calls.find(([sql]) =>
         String(sql).includes('UPDATE public.productos') && String(sql).includes('stock_base'),
       );
-      expect(updateStockBase).toBeDefined();
-      expect(updateStockBase[1]).toEqual(['p1', 'v1', 3]);
+      expect(updateStockBase).toBeUndefined();
 
       expect(result).toMatchObject({
         id_producto: 'p1',
