@@ -12,6 +12,9 @@ export interface AppConfiguration {
   anonymizeIntervalMs: number;
   anonymizeHours: number;
   inactivityTimeoutHours: number;
+  orderTimeoutMinutes: number;
+  orderTimeoutJobIntervalMs: number;
+  orderTimeoutBatchSize: number;
 }
 
 export default () =>
@@ -34,4 +37,7 @@ export default () =>
     anonymizeIntervalMs: parseInt(process.env.APP_ANONYMIZE_INTERVAL_MS ?? '3600000', 10),
     anonymizeHours: parseInt(process.env.APP_ANONYMIZE_HOURS ?? '72', 10),
     inactivityTimeoutHours: parseInt(process.env.APP_INACTIVITY_TIMEOUT_HOURS ?? '3', 10),
+    orderTimeoutMinutes: parseInt(process.env.APP_ORDER_TIMEOUT_MINUTES ?? '3', 10),
+    orderTimeoutJobIntervalMs: parseInt(process.env.APP_ORDER_TIMEOUT_JOB_INTERVAL_MS ?? '60000', 10),
+    orderTimeoutBatchSize: parseInt(process.env.APP_ORDER_TIMEOUT_BATCH_SIZE ?? '100', 10),
   }) satisfies AppConfiguration;

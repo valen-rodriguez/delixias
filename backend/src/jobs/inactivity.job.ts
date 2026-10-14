@@ -3,6 +3,9 @@ import { ConfigService } from '@nestjs/config';
 import type { Pool } from 'pg';
 import type { AppConfiguration } from '../config/configuration.js';
 import { RedisGeoService } from '../infra/redis-geo.service.js';
+import { OrdersService } from '../orders/orders.service.js';
+
+const AUTO_CLOSE_REASON = 'Jornada finalizada automáticamente por inactividad';
 
 @Injectable()
 export class InactivityJob {
@@ -13,6 +16,7 @@ export class InactivityJob {
   constructor(
     @Inject('DATABASE_POOL') private readonly pool: Pool,
     private readonly redisGeo: RedisGeoService,
+    private readonly ordersService: OrdersService,
     config: ConfigService<AppConfiguration>,
   ) {
     this.timeoutHours = config.get('inactivityTimeoutHours') ?? 3;
@@ -66,19 +70,20 @@ export class InactivityJob {
       const idJornada = row.id_jornada as string;
       const idVendedor = row.id_vendedor as string;
 
-      await this.pool.query(
-        `UPDATE public.jornadas
-            SET estado = 'FINALIZADA',
-                fecha_hora_fin = NOW(),
-                cierre_automatico = true
-          WHERE id_jornada = $1 AND estado = 'ACTIVA'`,
-        [idJornada],
+      const result = await this.ordersService.closeShiftAndCancelPendingOrders(
+        idJornada,
+        AUTO_CLOSE_REASON,
       );
+      if (!result) {
+        continue;
+      }
 
       await this.redisGeo.zrem('geo:vendedores', `vendedor:${idVendedor}`);
       await this.redisGeo.del(`geo:vendedores:${idJornada}`);
 
-      this.logger.log(`Closed inactive shift ${idJornada} for vendor ${idVendedor}`);
+      this.logger.log(
+        `Closed inactive shift ${idJornada} for vendor ${idVendedor} (cancelled ${result.cerrados.length} orders)`,
+      );
     }
   }
 
@@ -103,19 +108,20 @@ export class InactivityJob {
       const idJornada = row.id_jornada as string;
       const idVendedor = row.id_vendedor as string;
 
-      await this.pool.query(
-        `UPDATE public.jornadas
-            SET estado = 'FINALIZADA',
-                fecha_hora_fin = NOW(),
-                cierre_automatico = true
-          WHERE id_jornada = $1 AND estado = 'ACTIVA'`,
-        [idJornada],
+      const result = await this.ordersService.closeShiftAndCancelPendingOrders(
+        idJornada,
+        AUTO_CLOSE_REASON,
       );
+      if (!result) {
+        continue;
+      }
 
       await this.redisGeo.zrem('geo:vendedores', `vendedor:${idVendedor}`);
       await this.redisGeo.del(`geo:vendedores:${idJornada}`);
 
-      this.logger.log(`Closed zero-ping shift ${idJornada} for vendor ${idVendedor}`);
+      this.logger.log(
+        `Closed zero-ping shift ${idJornada} for vendor ${idVendedor} (cancelled ${result.cerrados.length} orders)`,
+      );
     }
   }
 

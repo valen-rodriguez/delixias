@@ -11,12 +11,18 @@ export default defineConfig({
     include: ['**/*.spec.ts'],
     coverage: {
       provider: 'v8',
-      include: ['src/catalog/**', 'src/shifts/**'],
+      include: ['src/catalog/**', 'src/shifts/**', 'src/orders/**'],
       thresholds: {
         lines: 80,
         statements: 80,
         functions: 80,
         branches: 80,
+        'src/orders/orders.repository.ts': {
+          lines: 90,
+          statements: 90,
+          functions: 90,
+          branches: 80,
+        },
       },
     },
   },

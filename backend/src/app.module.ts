@@ -9,6 +9,7 @@ import { AuthModule } from './auth/auth.module.js';
 import { UsersModule } from './users/users.module.js';
 import { CatalogModule } from './catalog/catalog.module.js';
 import { ShiftsModule } from './shifts/shifts.module.js';
+import { OrdersModule } from './orders/orders.module.js';
 import { GeolocationModule } from './geolocation/geolocation.module.js';
 import { MapModule } from './map/map.module.js';
 import { JobsModule } from './jobs/jobs.module.js';
@@ -30,6 +31,7 @@ import { AppService } from './app.service.js';
     UsersModule,
     CatalogModule,
     ShiftsModule,
+    OrdersModule,
     GeolocationModule,
     MapModule,
     JobsModule,
@@ -42,6 +44,7 @@ import { AppService } from './app.service.js';
       useFactory: () =>
         new ValidationPipe({
           whitelist: true,
+          forbidNonWhitelisted: true,
           transform: true,
           transformOptions: { enableImplicitConversion: false },
         }),
