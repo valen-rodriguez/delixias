@@ -29,16 +29,6 @@ jobs:
           fi
           echo "✓ Configuration valid"
 
-      - name: Ping REST API
-        run: |
-          url="${{ vars.SUPABASE_URL }}"
-          url="${url%/}"
-          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --fail \
-            "${url}/rest/v1/" \
-            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
-          echo "REST API → HTTP ${HTTP_STATUS}"
-
       - name: Ping Auth health
         run: |
           url="${{ vars.SUPABASE_URL }}"
@@ -47,6 +37,16 @@ jobs:
             "${url}/auth/v1/health" \
             -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}")
           echo "Auth health → HTTP ${HTTP_STATUS}"
+
+      - name: Ping REST API
+        run: |
+          url="${{ vars.SUPABASE_URL }}"
+          url="${url%/}"
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${url}/rest/v1/" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
+          echo "REST API → HTTP ${HTTP_STATUS} (any request counts as activity)"
 
       - name: Done
         run: echo "✓ Supabase pinged at $(date -u)"
