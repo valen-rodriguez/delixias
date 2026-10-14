@@ -2,26 +2,51 @@ name: Keep Supabase Alive
 
 on:
   schedule:
+    # Runs every Monday and Thursday at 06:00 UTC
     - cron: '0 6 * * 1,4'
   workflow_dispatch:
 
 jobs:
   keep-alive:
     runs-on: ubuntu-latest
+    environment: env
     steps:
-      - name: Ping Supabase REST API
+      - name: Validate configuration
         run: |
-          curl -s -o /dev/null -w "%{http_code}" \
-            "${{ secrets.SUPABASE_URL }}/rest/v1/" \
+          url="${{ vars.SUPABASE_URL }}"
+          key="${{ secrets.SUPABASE_ANON_KEY }}"
+          if [ -z "$url" ]; then
+            echo "::error::SUPABASE_URL is empty. Check your GitHub environment variables."
+            exit 1
+          fi
+          if [[ "$url" != https://* ]]; then
+            echo "::error::SUPABASE_URL must start with https:// — got: $url"
+            exit 1
+          fi
+          if [ -z "$key" ]; then
+            echo "::error::SUPABASE_ANON_KEY is empty. Check your GitHub environment secrets."
+            exit 1
+          fi
+          echo "✓ Configuration valid"
+
+      - name: Ping REST API
+        run: |
+          url="${{ vars.SUPABASE_URL }}"
+          url="${url%/}"
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --fail \
+            "${url}/rest/v1/" \
             -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}"
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
+          echo "REST API → HTTP ${HTTP_STATUS}"
 
-      - name: Ping Supabase Auth (keep DB active)
+      - name: Ping Auth health
         run: |
-          curl -s -o /dev/null -w "%{http_code}" \
-            "${{ secrets.SUPABASE_URL }}/auth/v1/health" \
-            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}"
+          url="${{ vars.SUPABASE_URL }}"
+          url="${url%/}"
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --fail \
+            "${url}/auth/v1/health" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}")
+          echo "Auth health → HTTP ${HTTP_STATUS}"
 
-      - name: Verify pings succeeded
-        run: |
-          echo "Supabase project pinged successfully at $(date -u)"
+      - name: Done
+        run: echo "✓ Supabase pinged at $(date -u)"
