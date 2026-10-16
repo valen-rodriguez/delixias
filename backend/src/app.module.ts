@@ -13,6 +13,7 @@ import { OrdersModule } from './orders/orders.module.js';
 import { GeolocationModule } from './geolocation/geolocation.module.js';
 import { MapModule } from './map/map.module.js';
 import { JobsModule } from './jobs/jobs.module.js';
+import { AdminModule } from './admin/admin.module.js';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor.js';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter.js';
 import { AppController } from './app.controller.js';
@@ -35,6 +36,7 @@ import { AppService } from './app.service.js';
     GeolocationModule,
     MapModule,
     JobsModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [

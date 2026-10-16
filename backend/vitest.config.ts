@@ -9,9 +9,10 @@ export default defineConfig({
     globals: true,
     root: './',
     include: ['**/*.spec.ts'],
+    setupFiles: ['./vitest.setup.ts'],
     coverage: {
       provider: 'v8',
-      include: ['src/catalog/**', 'src/shifts/**', 'src/orders/**'],
+      include: ['src/catalog/**', 'src/shifts/**', 'src/orders/**', 'src/admin/**'],
       thresholds: {
         lines: 80,
         statements: 80,

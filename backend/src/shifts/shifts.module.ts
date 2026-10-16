@@ -9,5 +9,6 @@ import { ShiftsService } from './shifts.service.js';
   imports: [AuthModule, EventEmitterModule.forRoot()],
   controllers: [ShiftsController],
   providers: [ShiftsService, ShiftsRepository],
+  exports: [ShiftsService, ShiftsRepository],
 })
 export class ShiftsModule {}

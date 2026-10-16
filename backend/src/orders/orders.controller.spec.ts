@@ -83,7 +83,7 @@ describe('OrdersController', () => {
   });
 
   it('POST /orders/:id/reject usa el vendedor del JWT', async () => {
-    await makeController().rejectOrder(makeRequest() as never, ID, {});
+    await makeController().rejectOrder(makeRequest() as never, ID, { motivo: 'no disponible' });
     expect(service.rejectOrder).toHaveBeenCalledWith('u1', ID);
   });
 
