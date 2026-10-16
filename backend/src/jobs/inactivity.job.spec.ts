@@ -83,6 +83,24 @@ describe('InactivityJob', () => {
     ).not.toHaveBeenCalled();
   });
 
+  it('continúa procesando el lote si una jornada falla', async () => {
+    const secondCall = { id_jornada: 'j2', id_vendedor: 'v2', cerrados: [], yaFinalizada: false };
+    ordersService.closeShiftAndCancelPendingOrders.mockImplementation(async (idJornada: string) => {
+      if (idJornada === 'j1') throw new Error('db error');
+      return secondCall;
+    });
+
+    pool.query.mockImplementation(async () => ({
+      rows: [{ id_jornada: 'j1', id_vendedor: 'v1' }, { id_jornada: 'j2', id_vendedor: 'v2' }],
+      rowCount: 2,
+    }));
+
+    await makeJob().run();
+
+    expect(ordersService.closeShiftAndCancelPendingOrders).toHaveBeenCalledTimes(4);
+    expect(redisGeo.del).toHaveBeenCalledWith('geo:vendedores:j2');
+  });
+
   it('el código fuente no contiene UPDATE public.jornadas (regresión)', () => {
     const source = readFileSync(
       new URL('./inactivity.job.ts', import.meta.url),

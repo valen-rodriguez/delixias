@@ -70,20 +70,26 @@ export class InactivityJob {
       const idJornada = row.id_jornada as string;
       const idVendedor = row.id_vendedor as string;
 
-      const result = await this.ordersService.closeShiftAndCancelPendingOrders(
-        idJornada,
-        AUTO_CLOSE_REASON,
-      );
-      if (!result) {
-        continue;
+        try {
+        const result = await this.ordersService.closeShiftAndCancelPendingOrders(
+          idJornada,
+          AUTO_CLOSE_REASON,
+        );
+        if (!result) {
+          continue;
+        }
+
+        await this.redisGeo.zrem('geo:vendedores', `vendedor:${idVendedor}`);
+        await this.redisGeo.del(`geo:vendedores:${idJornada}`);
+
+        this.logger.log(
+          `Closed inactive shift ${idJornada} for vendor ${idVendedor} (cancelled ${result.cerrados.length} orders)`,
+        );
+      } catch (err) {
+        this.logger.warn(
+          `Failed to close inactive shift ${idJornada} for vendor ${idVendedor}: ${err}`,
+        );
       }
-
-      await this.redisGeo.zrem('geo:vendedores', `vendedor:${idVendedor}`);
-      await this.redisGeo.del(`geo:vendedores:${idJornada}`);
-
-      this.logger.log(
-        `Closed inactive shift ${idJornada} for vendor ${idVendedor} (cancelled ${result.cerrados.length} orders)`,
-      );
     }
   }
 
@@ -108,20 +114,26 @@ export class InactivityJob {
       const idJornada = row.id_jornada as string;
       const idVendedor = row.id_vendedor as string;
 
-      const result = await this.ordersService.closeShiftAndCancelPendingOrders(
-        idJornada,
-        AUTO_CLOSE_REASON,
-      );
-      if (!result) {
-        continue;
+      try {
+        const result = await this.ordersService.closeShiftAndCancelPendingOrders(
+          idJornada,
+          AUTO_CLOSE_REASON,
+        );
+        if (!result) {
+          continue;
+        }
+
+        await this.redisGeo.zrem('geo:vendedores', `vendedor:${idVendedor}`);
+        await this.redisGeo.del(`geo:vendedores:${idJornada}`);
+
+        this.logger.log(
+          `Closed zero-ping shift ${idJornada} for vendor ${idVendedor} (cancelled ${result.cerrados.length} orders)`,
+        );
+      } catch (err) {
+        this.logger.warn(
+          `Failed to close zero-ping shift ${idJornada} for vendor ${idVendedor}: ${err}`,
+        );
       }
-
-      await this.redisGeo.zrem('geo:vendedores', `vendedor:${idVendedor}`);
-      await this.redisGeo.del(`geo:vendedores:${idJornada}`);
-
-      this.logger.log(
-        `Closed zero-ping shift ${idJornada} for vendor ${idVendedor} (cancelled ${result.cerrados.length} orders)`,
-      );
     }
   }
 
