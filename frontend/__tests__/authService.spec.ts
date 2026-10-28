@@ -1,5 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { signIn, signUp, signOut, getSession, refreshSession } from '@/services/authService';
+import {
+  signIn,
+  signUp,
+  signOut,
+  getSession,
+  refreshSession,
+  resendSignupEmail,
+  onAuthStateChange,
+} from '@/services/authService';
 
 const mocks = vi.hoisted(() => ({
   signInWithPassword: vi.fn(),
@@ -7,6 +15,8 @@ const mocks = vi.hoisted(() => ({
   signOut: vi.fn(),
   getSession: vi.fn(),
   refreshSession: vi.fn(),
+  resend: vi.fn(),
+  onAuthStateChange: vi.fn(),
 }));
 
 vi.mock('@/lib/supabase', () => ({
@@ -127,5 +137,29 @@ describe('refreshSession', () => {
     } as any);
     const session = await refreshSession();
     expect(session?.access_token).toBe('newtok');
+  });
+});
+
+describe('resendSignupEmail', () => {
+  it('calls resend with signup type and resolves', async () => {
+    mocks.resend.mockResolvedValue({ data: {}, error: null });
+    await expect(resendSignupEmail('a@b.com')).resolves.toBeUndefined();
+    expect(mocks.resend).toHaveBeenCalledWith({ type: 'signup', email: 'a@b.com' });
+  });
+
+  it('throws on error', async () => {
+    mocks.resend.mockResolvedValue({ data: {}, error: new Error('resend failed') });
+    await expect(resendSignupEmail('a@b.com')).rejects.toThrow('resend failed');
+  });
+});
+
+describe('onAuthStateChange', () => {
+  it('subscribes and returns the supabase subscription', () => {
+    const unsubscribe = vi.fn();
+    mocks.onAuthStateChange.mockReturnValue({ data: { subscription: { unsubscribe } } });
+    const callback = vi.fn();
+    const result = onAuthStateChange(callback);
+    expect(mocks.onAuthStateChange).toHaveBeenCalledWith(callback);
+    expect(result.data.subscription.unsubscribe).toBe(unsubscribe);
   });
 });

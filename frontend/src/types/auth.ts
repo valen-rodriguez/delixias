@@ -25,4 +25,10 @@ export interface AuthState {
   loading: boolean;
 }
 
+export interface UpgradeToSellerInput {
+  dni: string;
+  direccion: string;
+  foto_perfil_url: string;
+}
+
 export type VendorStatusBanner = 'suspendido' | 'pendiente_revision' | 'bloqueado' | null;

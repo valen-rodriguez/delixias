@@ -1,5 +1,14 @@
 {
   "android": {
     "package": "com.xzyn.delixiasfrontend"
-  }
+  },
+  "plugins": [
+    [
+      "expo-image-picker",
+      {
+        "cameraPermission": "Delixias necesita acceso a tu cámara para tomar la foto de perfil del modo vendedor.",
+        "cameraMicrophonePermission": false
+      }
+    ]
+  ]
 }

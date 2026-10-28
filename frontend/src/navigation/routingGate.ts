@@ -9,7 +9,7 @@ export interface RoutingResult {
 
 const VENDOR_BANNER_TEXT: Record<Exclude<VendorStatusBanner, null>, string> = {
   suspendido: 'Tu cuenta de vendedor no está activa.',
-  pendiente_revision: 'Tu documentación está en revisión',
+  pendiente_revision: 'Tu documentación fue enviada y está siendo revisada por un Administrador.',
   bloqueado: 'Cuenta inhabilitada administrativamente',
 };
 
@@ -55,7 +55,13 @@ export const resolveInitialScreen = (
   return { screen: 'Home', rol, modoForzado, vendorStatusBanner };
 };
 
-export const getVendorBannerText = (banner: VendorStatusBanner): string | null => {
+export const getVendorBannerText = (
+  banner: VendorStatusBanner,
+  motivoSuspension?: string | null,
+): string | null => {
   if (!banner) return null;
+  if (banner === 'suspendido') {
+    return motivoSuspension?.trim() ? motivoSuspension : VENDOR_BANNER_TEXT.suspendido;
+  }
   return VENDOR_BANNER_TEXT[banner] ?? null;
 };

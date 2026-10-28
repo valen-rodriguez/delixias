@@ -1,59 +1,56 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { getSession } from '@/services/authService';
-import { getProfile } from '@/services/usersService';
-import { resolveInitialScreen } from '@/navigation/routingGate';
 import { useNavigation } from '@react-navigation/native';
+import { getSession, signOut } from '@/services/authService';
+import { getProfile } from '@/services/usersService';
+import { useProfile } from '@/context/ProfileContext';
+import { resolveInitialScreen } from '@/navigation/routingGate';
+import { deriveShellState } from '@/navigation/shellDerivation';
 import type { ParamList } from '../navigation/types';
 
 export const SplashScreen = () => {
   const navigation = useNavigation<StackNavigationProp<ParamList>>();
-  const [loading, setLoading] = useState(true);
+  const { setProfile, clearProfile } = useProfile();
 
   useEffect(() => {
     const resolveSession = async () => {
-      let hasSession = false;
-      let profile = null;
       try {
         const session = await getSession();
-        hasSession = !!session;
-        if (hasSession) {
+        if (session) {
           try {
-            profile = await getProfile();
+            const profile = await getProfile();
+            const result = resolveInitialScreen(true, profile);
+            if (result.screen === 'Home') {
+              setProfile(profile);
+              const shell = deriveShellState(profile);
+              navigation.replace(shell.screen === 'vendor' ? 'VendorTabs' : 'HomeCliente');
+              return;
+            }
           } catch {
-            profile = null;
+            // fall through to sign-out path
           }
         }
       } catch {
-        hasSession = false;
-      } finally {
-        const result = resolveInitialScreen(hasSession, profile);
-        if (result.screen === 'Home') {
-          navigation.replace('Home', {
-            rol: result.rol,
-            modoForzado: result.modoForzado,
-            vendorStatusBanner: result.vendorStatusBanner ?? null,
-          });
-        } else {
-          navigation.replace('Login');
-        }
-        setLoading(false);
+        // fall through to sign-out path
       }
+      try {
+        await signOut();
+      } catch {
+        // best-effort sign-out
+      }
+      clearProfile();
+      navigation.replace('Login');
     };
-    resolveSession();
-  }, []);
+    void resolveSession();
+  }, [navigation, setProfile, clearProfile]);
 
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#000000" />
-        <Text style={styles.text}>Cargando sesión...</Text>
-      </View>
-    );
-  }
-
-  return null;
+  return (
+    <View style={styles.container}>
+      <ActivityIndicator size="large" color="#000000" />
+      <Text style={styles.text}>Cargando sesión...</Text>
+    </View>
+  );
 };
 
 const styles = StyleSheet.create({

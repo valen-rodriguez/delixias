@@ -8,6 +8,12 @@ export default defineConfig({
     include: ['__tests__/**/*.spec.ts', '__tests__/**/*.spec.tsx'],
     coverage: {
       provider: 'v8',
+      include: [
+        'src/utils/**',
+        'src/services/**',
+        'src/navigation/roleSwitchGate.ts',
+        'src/navigation/shellDerivation.ts',
+      ],
       thresholds: {
         lines: 80,
         statements: 80,

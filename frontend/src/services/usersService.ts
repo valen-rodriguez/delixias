@@ -2,7 +2,7 @@ import axios from 'axios';
 import type { AxiosInstance } from 'axios';
 import { supabase } from '@/lib/supabase';
 import { refreshSession } from '@/services/authService';
-import type { SanitizedProfile } from '@/types/auth';
+import type { RolOperativo, SanitizedProfile, UpgradeToSellerInput } from '@/types/auth';
 
 const apiUrl = process.env.EXPO_PUBLIC_API_URL;
 if (!apiUrl) {
@@ -49,6 +49,76 @@ export const getProfile = async (): Promise<SanitizedProfile> => {
   );
   if (!data?.data) {
     throw new Error('Usuario no encontrado');
+  }
+  return data.data;
+};
+
+export class ApiError extends Error {
+  readonly backendError: string | null;
+  readonly status: number;
+
+  constructor(backendError: string | null, status: number, message: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.backendError = backendError;
+    this.status = status;
+  }
+}
+
+const CONNECTION_ERROR_MESSAGE =
+  'No se pudo conectar con el servidor. Verificá tu conexión e intentá de nuevo.';
+
+export const toApiError = (error: unknown): ApiError => {
+  if (axios.isAxiosError(error)) {
+    const data = error.response?.data as { error?: unknown; message?: unknown } | undefined;
+    const backendError = typeof data?.error === 'string' ? data.error : null;
+    const message = typeof data?.message === 'string' ? data.message : null;
+    const status = error.response?.status ?? 0;
+    if (backendError) {
+      return new ApiError(backendError, status, message ?? 'Error del servidor.');
+    }
+    if (!error.response) {
+      return new ApiError(null, 0, CONNECTION_ERROR_MESSAGE);
+    }
+    return new ApiError(null, status, message ?? 'Ocurrió un error inesperado.');
+  }
+  if (error instanceof Error) {
+    return new ApiError(null, 0, error.message);
+  }
+  return new ApiError(null, 0, 'Ocurrió un error inesperado.');
+};
+
+export const switchProfileRole = async (rol: RolOperativo): Promise<SanitizedProfile> => {
+  const { data } = await api.patch<{ data: SanitizedProfile; error: unknown; message: string }>(
+    '/users/switch-role',
+    { rol },
+  );
+  if (!data?.data) {
+    throw new Error('La respuesta del servidor no incluyó el perfil actualizado.');
+  }
+  return data.data;
+};
+
+export const upgradeToSeller = async (input: UpgradeToSellerInput): Promise<SanitizedProfile> => {
+  const { data } = await api.post<{ data: SanitizedProfile; error: unknown; message: string }>(
+    '/users/upgrade-to-seller',
+    input,
+  );
+  if (!data?.data) {
+    throw new Error('La respuesta del servidor no incluyó el perfil actualizado.');
+  }
+  return data.data;
+};
+
+export const reappealDocumentation = async (
+  nuevaFotoPerfilUrl: string,
+): Promise<SanitizedProfile> => {
+  const { data } = await api.post<{ data: SanitizedProfile; error: unknown; message: string }>(
+    '/users/reappeal-documentation',
+    { nueva_foto_perfil_url: nuevaFotoPerfilUrl },
+  );
+  if (!data?.data) {
+    throw new Error('La respuesta del servidor no incluyó el perfil actualizado.');
   }
   return data.data;
 };

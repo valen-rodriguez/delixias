@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizePhone, isValidE164, E164_REGEX } from '@/utils/phone';
+import { normalizePhone, isValidE164, E164_REGEX, formatPhoneMask } from '@/utils/phone';
 
 describe('normalizePhone', () => {
   it('removes spaces, hyphens, parentheses', () => {
@@ -49,5 +49,16 @@ describe('E164_REGEX', () => {
   it('matches exactly +549 followed by 10 digits', () => {
     expect(E164_REGEX.test('+5491112345678')).toBe(true);
     expect(E164_REGEX.test('+5490000000000')).toBe(true);
+  });
+});
+
+describe('formatPhoneMask', () => {
+  it('strips all non-digit characters', () => {
+    expect(formatPhoneMask('+54 9 11 1234-5678')).toBe('5491112345678');
+  });
+
+  it('returns empty for non-digit input', () => {
+    expect(formatPhoneMask('abc')).toBe('');
+    expect(formatPhoneMask('')).toBe('');
   });
 });

@@ -23,9 +23,57 @@ export const MESSAGES = {
   emailVerificationButton: 'Ya confirmé mi correo / Ir a Iniciar Sesión',
   emailVerificationResend: 'Reenviar correo de confirmación',
   vendorSuspended: 'Tu cuenta de vendedor no está activa.',
-  vendorPendingReview: 'Tu documentación está en revisión',
+  vendorPendingReview: 'Tu documentación fue enviada y está siendo revisada por un Administrador.',
   vendorBlocked: 'Cuenta inhabilitada administrativamente',
-  vendorSuspendedWithReason: (motivo: string) => `${motivo}`,
   networkError: 'Error de conexión. Intentá de nuevo.',
   sessionExpired: 'Sesión expirada. Iniciá sesión nuevamente.',
+
+  switchToVendorButton: 'Cambiar a Modo Vendedor',
+  switchToClientButton: 'Cambiar a Modo Cliente',
+  switchingInProgress: 'Cambiando de rol...',
+  signOutButton: 'Cerrar sesión',
+  switchErrorTitle: 'Error',
+  blockedNotice: 'Acceso bloqueado por administración.',
+
+  suspendedModalTitle: 'Cuenta de vendedor suspendida',
+  suspendedModalDefaultReason: 'Tu cuenta de vendedor no está activa.',
+  suspendedModalFixDocs: 'Corregir Documentación',
+  suspendedModalAccept: 'Cerrar',
+
+  pendingReviewAlertTitle: 'Documentación en revisión',
+  pendingReviewAlertBody: 'Tu documentación está siendo revisada por un Administrador.',
+
+  blockedAlertTitle: 'Cuenta inhabilitada',
+  blockedAlertBody: 'Tu cuenta fue bloqueada por un Administrador.',
+
+  fixDocsUnderBanner: 'Corregir Documentación',
+
+  upgradeTitle: 'Convertite en vendedor',
+  upgradeDniLabel: 'DNI',
+  upgradeDniInvalid: 'El DNI debe tener entre 7 y 9 dígitos.',
+  upgradeDniInUse: 'El DNI ya está registrado para otro vendedor.',
+  upgradeAddressLabel: 'Dirección',
+  upgradeAddressInvalid: 'Ingresá tu dirección.',
+  upgradePhotoButton: 'Tomar foto de perfil',
+  upgradePhotoRetake: 'Volver a tomar la foto',
+  upgradeSubmit: 'Enviar solicitud',
+  upgradeSubmitting: 'Enviando...',
+  upgradePhotoRequired: 'Tomá la foto de perfil para continuar.',
+  cameraUnavailable: 'No se pudo abrir la cámara o el permiso fue denegado.',
+
+  reappealTitle: 'Corregir documentación',
+  reappealBody:
+    'Volvé a tomar la foto de tu documento para solicitar la reactivación de tu cuenta.',
+  reappealSubmit: 'Enviar documentación',
+  reappealSubmitting: 'Enviando...',
+
+  profileIncompleteTitle: 'Perfil incompleto',
+  profileIncompleteBody:
+    'Tu perfil está incompleto. Cerrá sesión e iniciá de nuevo o volvé a registrarte.',
+
+  vendorHomePlaceholder: 'Pantalla principal del vendedor (próximamente)',
+  vendorProfileTitle: 'Perfil del vendedor',
+  vendorProfilePlaceholder: 'Gestión de tu perfil de vendedor (próximamente)',
+  vendorTabHome: 'Inicio',
+  vendorTabProfile: 'Perfil',
 } as const;
